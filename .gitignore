@@ -1,1 +1,6 @@
 data/
+*.log
+*.dat
+*.csv
+hud/
+__pycache__/

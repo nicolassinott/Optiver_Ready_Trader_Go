@@ -23,12 +23,14 @@ from typing import List
 from ready_trader_go import BaseAutoTrader, Instrument, Lifespan, MAXIMUM_ASK, MINIMUM_BID, Side
 from ready_trader_go.order_book import Order, OrderBook
 
+
 LOT_SIZE = 10
 POSITION_LIMIT = 100
 TICK_SIZE_IN_CENTS = 100
 MIN_BID_NEAREST_TICK = (MINIMUM_BID + TICK_SIZE_IN_CENTS) // TICK_SIZE_IN_CENTS * TICK_SIZE_IN_CENTS
 MAX_ASK_NEAREST_TICK = MAXIMUM_ASK // TICK_SIZE_IN_CENTS * TICK_SIZE_IN_CENTS
-MIN_PROFITABILITY = 2
+MIN_PROFITABILITY = 1
+
 
 class AutoTrader(BaseAutoTrader):
     """Example Auto-trader.
@@ -50,7 +52,6 @@ class AutoTrader(BaseAutoTrader):
         self.asks = dict()
         # self.ask_id = self.ask_price = self.bid_id = self.bid_price = self.position = 0
         self.position = 0
-        self.canceled_ids = set()
 
         self.last_bids = {
             Instrument.FUTURE: [MINIMUM_BID, MINIMUM_BID, MINIMUM_BID, MINIMUM_BID, MINIMUM_BID],
@@ -93,6 +94,9 @@ class AutoTrader(BaseAutoTrader):
         """
         self.logger.info("received order book for instrument %d with sequence number %d", instrument,
                          sequence_number)
+        
+        self.logger.info("%d\n", self.position)
+
         if instrument == Instrument.FUTURE:
             self.last_bids[Instrument.FUTURE] = bid_prices
             self.last_asks[Instrument.FUTURE] = ask_prices
@@ -127,66 +131,73 @@ class AutoTrader(BaseAutoTrader):
         # Cancel order flow
         # Must check if proceed or not
         # Cancel bid
+        pop_bid_ids = []
         for bid_id, bid_order in self.bids.items():
-            if bid_id in self.canceled_ids:
-                continue
             if self.last_bids[Instrument.FUTURE][0] <= bid_order.price + MIN_PROFITABILITY * TICK_SIZE_IN_CENTS:
                 self.send_cancel_order(bid_id)
-                self.canceled_ids.add(bid_id)
+                pop_bid_ids.append(bid_id)
             elif self.last_bids[Instrument.ETF][1] > bid_order.price:
                 self.send_cancel_order(bid_id)
-                self.canceled_ids.add(bid_id)
+                pop_bid_ids.append(bid_id)
+        for bid_id in pop_bid_ids:
+            self.bids.pop(bid_id)
         
         # Cancel ask
+        pop_ask_ids = []
         for ask_id, ask_order in self.asks.items():
-            if ask_id in self.canceled_ids:
-                continue
             if self.last_asks[Instrument.FUTURE][0] >= ask_order.price - MIN_PROFITABILITY * TICK_SIZE_IN_CENTS:
                 self.send_cancel_order(ask_id)
-                self.canceled_ids.add(ask_id)
+                pop_ask_ids.append(ask_id)
             elif self.last_asks[Instrument.ETF][1] < ask_order.price and self.last_asks[Instrument.ETF][1] != 0: # check case when there is no second order
                 self.send_cancel_order(ask_id)
-                self.canceled_ids.add(ask_id)
+                pop_ask_ids.append(ask_id)
+        for ask_id in pop_ask_ids:
+            self.asks.pop(ask_id)
 
+
+        print(self.bids)
         # Create order flow
         # If no current position, checks if profitable 
+        print(bid_prices)
+        print(ask_prices)
 
-        if not self.bids and self.position < POSITION_LIMIT // 2:
-            if self.last_bids[Instrument.FUTURE][0] > self.last_bids[Instrument.ETF][0] + MIN_PROFITABILITY * TICK_SIZE_IN_CENTS and self.last_bids[Instrument.ETF][0] > MIN_PROFITABILITY * TICK_SIZE_IN_CENTS:
+        if not self.bids:
+            print('a')
+            print(self.last_bids[Instrument.FUTURE][0], self.last_bids[Instrument.ETF][0])
+            if self.last_bids[Instrument.FUTURE][0] > self.last_bids[Instrument.ETF][0] + MIN_PROFITABILITY * TICK_SIZE_IN_CENTS:
+                print('b')
                 bid_id = next(self.order_ids)
-                bid_price = self.last_bids[Instrument.ETF][0] + TICK_SIZE_IN_CENTS # MIN_PROFITABILITY * 
+                bid_price = self.last_bids[Instrument.ETF][0] + MIN_PROFITABILITY * TICK_SIZE_IN_CENTS
                 bid_volume = 10
-                self.send_insert_order(bid_id,
-                                       Side.BID,
-                                       bid_price,
-                                       bid_volume,
-                                       Lifespan.GOOD_FOR_DAY)
                 bid_order = Order(bid_id,
                                   Instrument.ETF,
                                   Lifespan.GOOD_FOR_DAY,
-                                  Side.BID,
+                                  Side.ASK,
                                   bid_price,
                                   bid_volume)
-                
+                self.send_insert_order(bid_id,
+                                       Side.ASK,
+                                       bid_price,
+                                       bid_volume,
+                                       Lifespan.GOOD_FOR_DAY)
                 self.bids[bid_id] = bid_order
         
-        if not self.asks and self.position > -POSITION_LIMIT // 2:
-            if self.last_asks[Instrument.FUTURE][0] < self.last_asks[Instrument.ETF][0] - MIN_PROFITABILITY * TICK_SIZE_IN_CENTS and self.last_asks[Instrument.ETF][0] > MIN_PROFITABILITY * TICK_SIZE_IN_CENTS:
+        if not self.asks:
+            if self.last_asks[Instrument.FUTURE][0] < self.last_asks[Instrument.ETF][0] - MIN_PROFITABILITY * TICK_SIZE_IN_CENTS:
                 ask_id = next(self.order_ids)
-                ask_price = self.last_asks[Instrument.ETF][0] - TICK_SIZE_IN_CENTS # MIN_PROFITABILITY * pode melhorar essa margem
+                ask_price = self.last_asks[Instrument.ETF][0] - MIN_PROFITABILITY * TICK_SIZE_IN_CENTS # pode melhorar essa margem
                 ask_volume = 10
-                self.send_insert_order(ask_id,
-                                       Side.ASK,
-                                       ask_price,
-                                       ask_volume,
-                                       Lifespan.GOOD_FOR_DAY)
                 ask_order = Order(ask_id,
                                   Instrument.ETF,
                                   Lifespan.GOOD_FOR_DAY,
                                   Side.ASK,
                                   ask_price,
                                   ask_volume)
-                
+                self.send_insert_order(ask_id,
+                                       Side.ASK,
+                                       ask_price,
+                                       ask_volume,
+                                       Lifespan.GOOD_FOR_DAY)
                 self.asks[ask_id] = ask_order
 
     def on_order_filled_message(self, client_order_id: int, price: int, volume: int) -> None:
@@ -199,18 +210,11 @@ class AutoTrader(BaseAutoTrader):
         self.logger.info("received order filled for order %d with price %d and volume %d", client_order_id,
                          price, volume)
         if client_order_id in self.bids:
-            self.position += volume
-            self.send_hedge_order(next(self.order_ids), Side.ASK, MIN_BID_NEAREST_TICK, volume)
-            if client_order_id not in self.canceled_ids:
-                self.send_cancel_order(client_order_id)
-                self.canceled_ids.add(client_order_id)
-
-        elif client_order_id in self.asks:
             self.position -= volume
             self.send_hedge_order(next(self.order_ids), Side.BID, MAX_ASK_NEAREST_TICK, volume)
-            if client_order_id not in self.canceled_ids:
-                self.send_cancel_order(client_order_id)
-                self.canceled_ids.add(client_order_id)
+        elif client_order_id in self.asks:
+            self.position += volume
+            self.send_hedge_order(next(self.order_ids), Side.ASK, MIN_BID_NEAREST_TICK, volume)
 
     def on_order_status_message(self, client_order_id: int, fill_volume: int, remaining_volume: int,
                                 fees: int) -> None:
@@ -225,12 +229,23 @@ class AutoTrader(BaseAutoTrader):
         """
         self.logger.info("received order status for order %d with fill volume %d remaining %d and fees %d",
                          client_order_id, fill_volume, remaining_volume, fees)
-        
-        if remaining_volume == 0:
-            if client_order_id in self.bids:
-                self.bids.pop(client_order_id)
-            elif client_order_id in self.asks:
-                self.asks.pop(client_order_id) 
+        # if remaining_volume == 0:
+        #     if client_order_id == self.bid_id:
+        #         self.bid_id = 0
+        #     elif client_order_id == self.ask_id:
+        #         self.ask_id = 0
+
+        # Must delete no matter what volume!
+        # if client_order_id in self.bids.keys():
+        #     self.send_cancel_order(client_order_id)
+        #     self.bids.pop(client_order_id)
+        # elif client_order_id in self.asks.keys():
+        #     self.send_cancel_order(client_order_id)
+        #     self.asks.pop(client_order_id)
+
+        # It could be either a bid or an ask
+            # self.bids.discard(client_order_id)
+            # self.asks.discard(client_order_id)
 
     def on_trade_ticks_message(self, instrument: int, sequence_number: int, ask_prices: List[int],
                                ask_volumes: List[int], bid_prices: List[int], bid_volumes: List[int]) -> None:

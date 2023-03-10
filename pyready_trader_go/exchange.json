@@ -37,6 +37,8 @@
   },
   "Traders": {
     "TraderOne": "secret",
-    "TraderTwo": "secret"
+    "Autotrader": "secret",
+    "Trader1": "secret",
+    "Trader2": "secret"
   }
 }

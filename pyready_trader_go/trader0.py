@@ -24,7 +24,7 @@ from ready_trader_go import BaseAutoTrader, Instrument, Lifespan, MAXIMUM_ASK, M
 from ready_trader_go.order_book import Order, OrderBook
 
 LOT_SIZE = 10
-POSITION_LIMIT = 100
+POSITION_LIMIT = 80
 TICK_SIZE_IN_CENTS = 100
 MIN_BID_NEAREST_TICK = (MINIMUM_BID + TICK_SIZE_IN_CENTS) // TICK_SIZE_IN_CENTS * TICK_SIZE_IN_CENTS
 MAX_ASK_NEAREST_TICK = MAXIMUM_ASK // TICK_SIZE_IN_CENTS * TICK_SIZE_IN_CENTS
@@ -53,10 +53,18 @@ class AutoTrader(BaseAutoTrader):
             Instrument.FUTURE: [MINIMUM_BID, MINIMUM_BID, MINIMUM_BID, MINIMUM_BID, MINIMUM_BID],
             Instrument.ETF: [MINIMUM_BID, MINIMUM_BID, MINIMUM_BID, MINIMUM_BID, MINIMUM_BID]
         }
+        self.last_bids_volumes = {
+            Instrument.FUTURE: [0, 0, 0, 0, 0],
+            Instrument.ETF: [0, 0, 0, 0, 0]
+        }
 
         self.last_asks = {
             Instrument.FUTURE: [MAXIMUM_ASK, MAXIMUM_ASK, MAXIMUM_ASK, MAXIMUM_ASK, MAXIMUM_ASK],
             Instrument.ETF: [MAXIMUM_ASK, MAXIMUM_ASK, MAXIMUM_ASK, MAXIMUM_ASK, MAXIMUM_ASK]
+        }
+        self.last_asks_volumes = {
+            Instrument.FUTURE: [0, 0, 0, 0, 0],
+            Instrument.ETF: [0, 0, 0, 0, 0]
         }
 
     def on_error_message(self, client_order_id: int, error_message: bytes) -> None:
@@ -93,9 +101,15 @@ class AutoTrader(BaseAutoTrader):
         if instrument == Instrument.FUTURE:
             self.last_bids[Instrument.FUTURE] = bid_prices
             self.last_asks[Instrument.FUTURE] = ask_prices
+
+            self.last_bids_volumes[Instrument.FUTURE] = bid_volumes
+            self.last_asks_volumes[Instrument.FUTURE] = ask_volumes
         else:
             self.last_bids[Instrument.ETF] = bid_prices
             self.last_asks[Instrument.ETF] = ask_prices
+
+            self.last_bids_volumes[Instrument.ETF] = bid_volumes
+            self.last_asks_volumes[Instrument.ETF] = ask_volumes
 
         # Cancel order flow
         # Must check if proceed or not
@@ -124,11 +138,13 @@ class AutoTrader(BaseAutoTrader):
         # Create order flow
         # If no current position, checks if profitable 
 
-        if not self.bids and self.position < POSITION_LIMIT // 2:
+        if not self.bids and self.position < POSITION_LIMIT:
             if self.last_bids[Instrument.FUTURE][0] > self.last_bids[Instrument.ETF][0] + MIN_PROFITABILITY * TICK_SIZE_IN_CENTS and self.last_bids[Instrument.ETF][0] > MIN_PROFITABILITY * TICK_SIZE_IN_CENTS:
                 bid_id = next(self.order_ids)
-                bid_price = self.last_bids[Instrument.ETF][0] + TICK_SIZE_IN_CENTS # MIN_PROFITABILITY * 
+                bid_price = self.last_bids[Instrument.ETF][0] + TICK_SIZE_IN_CENTS # MIN_PROFITABILITY *
                 bid_volume = 10
+                if bid_price > self.last_asks[Instrument.ETF][0] and self.last_asks[Instrument.ETF][0] != 0:
+                    bid_price = self.last_asks[Instrument.ETF][0] # maybe change volume in this case to the maximum possible?
                 self.send_insert_order(bid_id,
                                        Side.BID,
                                        bid_price,
@@ -143,11 +159,13 @@ class AutoTrader(BaseAutoTrader):
                 
                 self.bids[bid_id] = bid_order
         
-        if not self.asks and self.position > -POSITION_LIMIT // 2:
+        if not self.asks and self.position > -POSITION_LIMIT:
             if self.last_asks[Instrument.FUTURE][0] < self.last_asks[Instrument.ETF][0] - MIN_PROFITABILITY * TICK_SIZE_IN_CENTS and self.last_asks[Instrument.ETF][0] > MIN_PROFITABILITY * TICK_SIZE_IN_CENTS:
                 ask_id = next(self.order_ids)
                 ask_price = self.last_asks[Instrument.ETF][0] - TICK_SIZE_IN_CENTS # MIN_PROFITABILITY * pode melhorar essa margem
                 ask_volume = 10
+                if ask_price < self.last_bids[Instrument.ETF][0] and self.last_bids[Instrument.ETF][0] != 0:
+                    ask_price = self.last_bids[Instrument.ETF][0]
                 self.send_insert_order(ask_id,
                                        Side.ASK,
                                        ask_price,
@@ -172,15 +190,15 @@ class AutoTrader(BaseAutoTrader):
         self.logger.info("received order filled for order %d with price %d and volume %d", client_order_id,
                          price, volume)
         if client_order_id in self.bids:
-            self.position += volume
             self.send_hedge_order(next(self.order_ids), Side.ASK, MIN_BID_NEAREST_TICK, volume)
+            self.position += volume
             if client_order_id not in self.canceled_ids:
                 self.send_cancel_order(client_order_id)
                 self.canceled_ids.add(client_order_id)
 
         elif client_order_id in self.asks:
-            self.position -= volume
             self.send_hedge_order(next(self.order_ids), Side.BID, MAX_ASK_NEAREST_TICK, volume)
+            self.position -= volume
             if client_order_id not in self.canceled_ids:
                 self.send_cancel_order(client_order_id)
                 self.canceled_ids.add(client_order_id)

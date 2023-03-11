@@ -33,6 +33,15 @@ constexpr int TICK_SIZE_IN_CENTS = 100;
 constexpr int MIN_BID_NEARST_TICK = (MINIMUM_BID + TICK_SIZE_IN_CENTS) / TICK_SIZE_IN_CENTS * TICK_SIZE_IN_CENTS;
 constexpr int MAX_ASK_NEAREST_TICK = MAXIMUM_ASK / TICK_SIZE_IN_CENTS * TICK_SIZE_IN_CENTS;
 
+constexpr int MIN_PROFITABILITY = 2;
+constexpr int MAX_ORDERS = 2;
+constexpr int ORDER_VOLUME = 10;
+
+enum class Instrument{
+    FUTURE = 0,
+    ETF = 1
+};
+
 AutoTrader::AutoTrader(boost::asio::io_context& context) : BaseAutoTrader(context)
 {
 }
@@ -74,38 +83,91 @@ void AutoTrader::OrderBookMessageHandler(Instrument instrument,
                                    << "; bid prices: " << bidPrices[0]
                                    << "; bid volumes: " << bidVolumes[0];
 
-    if (instrument == Instrument::FUTURE)
-    {
-        unsigned long priceAdjustment = - (mPosition / LOT_SIZE) * TICK_SIZE_IN_CENTS;
-        unsigned long newAskPrice = (askPrices[0] != 0) ? askPrices[0] + priceAdjustment : 0;
-        unsigned long newBidPrice = (bidPrices[0] != 0) ? bidPrices[0] + priceAdjustment : 0;
+    // a verificar (fazer for ou não ou fazer ref)
+    unsigned long orderType = instrument == Instrument::ETF;
+    // mLastAskPrice[orderType] = askPrices;
+    // mLastBidPrices[orderType] = bidPrices;
+    for(unsigned long i = 0; i<TOP_LEVEL_COUNT; ++i) {
+        mLastAskPrice[orderType][i] = askPrices[i];
+        mLastBidPrice[orderType][i] = bidPrices[i];
+    }
 
-        if (mAskId != 0 && newAskPrice != 0 && newAskPrice != mAskPrice)
-        {
-            SendCancelOrder(mAskId);
-            mAskId = 0;
-        }
-        if (mBidId != 0 && newBidPrice != 0 && newBidPrice != mBidPrice)
-        {
-            SendCancelOrder(mBidId);
-            mBidId = 0;
-        }
-
-        if (mAskId == 0 && newAskPrice != 0 && mPosition > -POSITION_LIMIT)
-        {
-            mAskId = mNextMessageId++;
-            mAskPrice = newAskPrice;
-            SendInsertOrder(mAskId, Side::SELL, newAskPrice, LOT_SIZE, Lifespan::GOOD_FOR_DAY);
-            mAsks.emplace(mAskId);
-        }
-        if (mBidId == 0 && newBidPrice != 0 && mPosition < POSITION_LIMIT)
-        {
-            mBidId = mNextMessageId++;
-            mBidPrice = newBidPrice;
-            SendInsertOrder(mBidId, Side::BUY, newBidPrice, LOT_SIZE, Lifespan::GOOD_FOR_DAY);
-            mBids.emplace(mBidId);
+    // Cancel order flow
+    // Must check if proceed or not
+    // Cancel bid
+    for(auto& [bidId, bidPrice] : mBids){
+        if(mCanceledIds.count(bidId)) continue;
+        if(mLastBids[Instrument.FUTURE][0] <= bidPrice + MIN_PROFITABILITY * TICK_SIZE_IN_CENTS){
+            SendCancelOrder(bidId);
+            mCanceledIds.insert(bidId);
+        } else if (mLastBids[Instrument.ETF][1] > bidPrice){ 
+            SendCancelOrder(bidId);
+            mCanceledIds.insert(bidId);
         }
     }
+
+    // Cancel ask
+    for(auto& [askId, askPrice] : mAsks){
+        if(mCanceledIds.count(askId)) continue;
+        if(mLastAsk[Instrument.ETF][0] >= askPrice - MIN_PROFITABILITY * TICK_SIZE_IN_CENTS){
+            SendCancelOrder(askId);
+            mCanceledIds.insert(bidId);
+        } else if (mLastAsk[Instrument.ETF][1] < askPrice && mLastAsk[Instrument.ETF][1] != 0){
+            SendCancelOrder(askId);
+            mCanceledIds.insert(askId);
+        }
+    }
+
+    
+    // Create order flow
+    // If no current position, checks if profitable
+    if(mBids.size() < MAX_ORDERS && mPosition < POSITION_LIMIT){
+        if(mLastBids[Instrument.FUTURE][0] > mLastBids[Instrument.ETF][0] + MIN_PROFITABILITY * TICK_SIZE_IN_CENTS 
+        && mLastBids[Instrument.ETF][0] > MIN_PROFITABILITY * TICK_SIZE_IN_CENTS){
+            unsigned long bidId = ++mNextMessageId;
+            unsigned long bidPrice = mLastBid[Instrument.ETF][0] + TICK_SIZE_IN_CENTS;
+            unsigned long bidVolume = ORDER_VOLUME;
+            if(bidPrice > mLastAsk[Instrument.ETF][0] && mLastAsk[Instrument.ETF][0] != 0)
+                bidPrice = mLastAsk[Instrument.ETF][0];
+            SendInsertOrder(bidId, Side::BID, bidPrice, bidVolume, Lifespan::GOOD_FOR_DAY);
+            mBids[bidId] = bidPrice;
+        }
+    } 
+    // ELIF
+
+
+     // if (instrument == Instrument::FUTURE)
+    // {
+    //     unsigned long priceAdjustment = - (mPosition / LOT_SIZE) * TICK_SIZE_IN_CENTS;
+    //     unsigned long newAskPrice = (askPrices[0] != 0) ? askPrices[0] + priceAdjustment : 0;
+    //     unsigned long newBidPrice = (bidPrices[0] != 0) ? bidPrices[0] + priceAdjustment : 0;
+
+    //     if (mAskId != 0 && newAskPrice != 0 && newAskPrice != mAskPrice)
+    //     {
+    //         SendCancelOrder(mAskId);
+    //         mAskId = 0;
+    //     }
+    //     if (mBidId != 0 && newBidPrice != 0 && newBidPrice != mBidPrice)
+    //     {
+    //         SendCancelOrder(mBidId);
+    //         mBidId = 0;
+    //     }
+
+    //     if (mAskId == 0 && newAskPrice != 0 && mPosition > -POSITION_LIMIT)
+    //     {
+    //         mAskId = mNextMessageId++;
+    //         mAskPrice = newAskPrice;
+    //         SendInsertOrder(mAskId, Side::SELL, newAskPrice, LOT_SIZE, Lifespan::GOOD_FOR_DAY);
+    //         mAsks.emplace(mAskId);
+    //     }
+    //     if (mBidId == 0 && newBidPrice != 0 && mPosition < POSITION_LIMIT)
+    //     {
+    //         mBidId = mNextMessageId++;
+    //         mBidPrice = newBidPrice;
+    //         SendInsertOrder(mBidId, Side::BUY, newBidPrice, LOT_SIZE, Lifespan::GOOD_FOR_DAY);
+    //         mBids.emplace(mBidId);
+    //     }
+    // }
 }
 
 void AutoTrader::OrderFilledMessageHandler(unsigned long clientOrderId,

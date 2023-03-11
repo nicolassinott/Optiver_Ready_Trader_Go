@@ -117,24 +117,24 @@ class AutoTrader(BaseAutoTrader):
         # Cancel order flow
         # Must check if proceed or not
         # Cancel bid
-        for bid_id, bid_order in self.bids.items():
+        for bid_id, bid_price in self.bids.items():
             if bid_id in self.canceled_ids:
                 continue
-            if self.last_bids[Instrument.FUTURE][0] <= bid_order.price + MIN_PROFITABILITY * TICK_SIZE_IN_CENTS:
+            if self.last_bids[Instrument.FUTURE][0] <= bid_price + MIN_PROFITABILITY * TICK_SIZE_IN_CENTS:
                 self.send_cancel_order(bid_id)
                 self.canceled_ids.add(bid_id)
-            elif self.last_bids[Instrument.ETF][1] > bid_order.price:
+            elif self.last_bids[Instrument.ETF][1] > bid_price:
                 self.send_cancel_order(bid_id)
                 self.canceled_ids.add(bid_id)
         
         # Cancel ask
-        for ask_id, ask_order in self.asks.items():
+        for ask_id, ask_price in self.asks.items():
             if ask_id in self.canceled_ids:
                 continue
-            if self.last_asks[Instrument.FUTURE][0] >= ask_order.price - MIN_PROFITABILITY * TICK_SIZE_IN_CENTS:
+            if self.last_asks[Instrument.FUTURE][0] >= ask_price - MIN_PROFITABILITY * TICK_SIZE_IN_CENTS:
                 self.send_cancel_order(ask_id)
                 self.canceled_ids.add(ask_id)
-            elif self.last_asks[Instrument.ETF][1] < ask_order.price and self.last_asks[Instrument.ETF][1] != 0: # check case when there is no second order
+            elif self.last_asks[Instrument.ETF][1] < ask_price and self.last_asks[Instrument.ETF][1] != 0: # check case when there is no second order
                 self.send_cancel_order(ask_id)
                 self.canceled_ids.add(ask_id)
 
@@ -154,13 +154,13 @@ class AutoTrader(BaseAutoTrader):
                                        bid_price,
                                        bid_volume,
                                        Lifespan.GOOD_FOR_DAY)
-                bid_order = Order(bid_id,
-                                  Instrument.ETF,
-                                  Lifespan.GOOD_FOR_DAY,
-                                  Side.BID,
-                                  bid_price,
-                                  bid_volume)
-                self.bids[bid_id] = bid_order
+                # bid_order = Order(bid_id,
+                #                   Instrument.ETF,
+                #                   Lifespan.GOOD_FOR_DAY,
+                #                   Side.BID,
+                #                   bid_price,
+                #                   bid_volume)
+                self.bids[bid_id] = bid_price
             
             elif self.position < - POSITION_LIMIT * 0.6 and self.last_asks[Instrument.FUTURE][0] != 0:
                 bid_id = next(self.order_ids)
@@ -171,13 +171,13 @@ class AutoTrader(BaseAutoTrader):
                                        bid_price,
                                        bid_volume,
                                        Lifespan.GOOD_FOR_DAY)
-                bid_order = Order(bid_id,
-                                  Instrument.ETF,
-                                  Lifespan.GOOD_FOR_DAY,
-                                  Side.BID,
-                                  bid_price,
-                                  bid_volume)
-                self.bids[bid_id] = bid_order
+                # bid_order = Order(bid_id,
+                #                   Instrument.ETF,
+                #                   Lifespan.GOOD_FOR_DAY,
+                #                   Side.BID,
+                #                   bid_price,
+                #                   bid_volume)
+                self.bids[bid_id] = bid_price
         
 
 
@@ -196,14 +196,14 @@ class AutoTrader(BaseAutoTrader):
                                        ask_price,
                                        ask_volume,
                                        Lifespan.GOOD_FOR_DAY)
-                ask_order = Order(ask_id,
-                                  Instrument.ETF,
-                                  Lifespan.GOOD_FOR_DAY,
-                                  Side.ASK,
-                                  ask_price,
-                                  ask_volume)
+                # ask_order = Order(ask_id,
+                #                   Instrument.ETF,
+                #                   Lifespan.GOOD_FOR_DAY,
+                #                   Side.ASK,
+                #                   ask_price,
+                #                   ask_volume)
                 
-                self.asks[ask_id] = ask_order
+                self.asks[ask_id] = ask_price
             elif self.position > POSITION_LIMIT * 0.6 and self.last_bids[Instrument.FUTURE][0] != 0:
                 # talvez ver o spread do ganho
                 ask_id = next(self.order_ids)
@@ -214,13 +214,13 @@ class AutoTrader(BaseAutoTrader):
                                        ask_price,
                                        ask_volume,
                                        Lifespan.GOOD_FOR_DAY)
-                ask_order = Order(ask_id,
-                                  Instrument.ETF,
-                                  Lifespan.GOOD_FOR_DAY,
-                                  Side.ASK,
-                                  ask_price,
-                                  ask_volume)
-                self.asks[ask_id] = ask_order
+                # ask_order = Order(ask_id,
+                #                   Instrument.ETF,
+                #                   Lifespan.GOOD_FOR_DAY,
+                #                   Side.ASK,
+                #                   ask_price,
+                #                   ask_volume)
+                self.asks[ask_id] = ask_price
 
     def on_order_filled_message(self, client_order_id: int, price: int, volume: int) -> None:
         """Called when one of your orders is filled, partially or fully.

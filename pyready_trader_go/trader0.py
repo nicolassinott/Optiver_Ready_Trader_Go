@@ -228,7 +228,7 @@ class AutoTrader(BaseAutoTrader):
         The price is the price at which the order was (partially) filled,
         which may be better than the order's limit price. The volume is
         the number of lots filled at that price.
-        """
+        """ 
         # self.logger.info("received order filled for order %d with price %d and volume %d", client_order_id,
         #                  price, volume)
         if client_order_id in self.bids:

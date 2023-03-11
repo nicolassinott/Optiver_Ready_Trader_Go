@@ -76,7 +76,7 @@ class AutoTrader(BaseAutoTrader):
         If the error pertains to a particular order, then the client_order_id
         will identify that order, otherwise the client_order_id will be zero.
         """
-        # self.logger.warning("error with order %d: %s", client_order_id, error_message.decode())
+        self.logger.warning("error with order %d: %s", client_order_id, error_message.decode())
         if client_order_id != 0 and (client_order_id in self.bids or client_order_id in self.asks):
             self.on_order_status_message(client_order_id, 0, 0, 0)
 
@@ -87,8 +87,8 @@ class AutoTrader(BaseAutoTrader):
         which may be better than the order's limit price. The volume is
         the number of lots filled at that price.
         """
-        # self.logger.info("received hedge filled for order %d with average price %d and volume %d", client_order_id,
-        #                  price, volume)
+        self.logger.info("received hedge filled for order %d with average price %d and volume %d", client_order_id,
+                         price, volume)
 
     def on_order_book_update_message(self, instrument: int, sequence_number: int, ask_prices: List[int],
                                      ask_volumes: List[int], bid_prices: List[int], bid_volumes: List[int]) -> None:
@@ -99,8 +99,8 @@ class AutoTrader(BaseAutoTrader):
         prices are reported along with the volume available at each of those
         price levels.
         """
-        # self.logger.info("received order book for instrument %d with sequence number %d", instrument,
-        #                  sequence_number)
+        self.logger.info("received order book for instrument %d with sequence number %d", instrument,
+                         sequence_number)
         if instrument == Instrument.FUTURE:
             self.last_bids[Instrument.FUTURE] = bid_prices
             self.last_asks[Instrument.FUTURE] = ask_prices
@@ -229,8 +229,8 @@ class AutoTrader(BaseAutoTrader):
         which may be better than the order's limit price. The volume is
         the number of lots filled at that price.
         """
-        # self.logger.info("received order filled for order %d with price %d and volume %d", client_order_id,
-        #                  price, volume)
+        self.logger.info("received order filled for order %d with price %d and volume %d", client_order_id,
+                         price, volume)
         if client_order_id in self.bids:
             self.send_hedge_order(next(self.order_ids), Side.ASK, MIN_BID_NEAREST_TICK, volume)
             self.position += volume
@@ -256,8 +256,8 @@ class AutoTrader(BaseAutoTrader):
 
         If an order is cancelled its remaining volume will be zero.
         """
-        # self.logger.info("received order status for order %d with fill volume %d remaining %d and fees %d",
-        #                  client_order_id, fill_volume, remaining_volume, fees)
+        self.logger.info("received order status for order %d with fill volume %d remaining %d and fees %d",
+                         client_order_id, fill_volume, remaining_volume, fees)
         
         if remaining_volume == 0:
             if client_order_id in self.bids:
@@ -276,5 +276,5 @@ class AutoTrader(BaseAutoTrader):
         If there are less than five prices on a side, then zeros will appear at
         the end of both the prices and volumes arrays.
         """
-        # self.logger.info("received trade ticks for instrument %d with sequence number %d", instrument,
-        #                  sequence_number)
+        self.logger.info("received trade ticks for instrument %d with sequence number %d", instrument,
+                         sequence_number)

@@ -120,7 +120,7 @@ class AutoTrader(BaseAutoTrader):
         for bid_id, bid_price in self.bids.items():
             if bid_id in self.canceled_ids:
                 continue
-            if self.last_bids[Instrument.FUTURE][0] <= bid_price + MIN_PROFITABILITY * TICK_SIZE_IN_CENTS: # and self.position >= -POSITION_LIMIT * 0.6: # 
+            if self.last_bids[Instrument.FUTURE][0] <= bid_price + MIN_PROFITABILITY * TICK_SIZE_IN_CENTS: # and self.position >= -POSITION_LIMIT * 0.6
                 self.send_cancel_order(bid_id)
                 self.canceled_ids.add(bid_id)
             elif self.last_bids[Instrument.ETF][1] > bid_price:
@@ -131,7 +131,7 @@ class AutoTrader(BaseAutoTrader):
         for ask_id, ask_price in self.asks.items():
             if ask_id in self.canceled_ids:
                 continue
-            if self.last_asks[Instrument.FUTURE][0] >= ask_price - MIN_PROFITABILITY * TICK_SIZE_IN_CENTS: # and self.position <= POSITION_LIMIT * 0.6: # 
+            if self.last_asks[Instrument.FUTURE][0] >= ask_price - MIN_PROFITABILITY * TICK_SIZE_IN_CENTS: # and self.position <= POSITION_LIMIT * 0.6
                 self.send_cancel_order(ask_id)
                 self.canceled_ids.add(ask_id)
             elif self.last_asks[Instrument.ETF][1] < ask_price and self.last_asks[Instrument.ETF][1] != 0: # check case when there is no second order
@@ -158,8 +158,6 @@ class AutoTrader(BaseAutoTrader):
             elif self.position < - POSITION_LIMIT * 0.6 and self.last_asks[Instrument.FUTURE][0] != 0:
                 bid_id = next(self.order_ids)
                 bid_price = self.last_asks[Instrument.FUTURE][0] + TICK_SIZE_IN_CENTS
-                # if bid_price > self.last_asks[Instrument.ETF][0] and self.last_asks[Instrument.ETF][0] != 0:
-                #     bid_price = self.last_asks[Instrument.ETF][0]
                 bid_volume = 10
                 self.send_insert_order(bid_id,
                                        Side.BID,
@@ -186,8 +184,6 @@ class AutoTrader(BaseAutoTrader):
                 # talvez ver o spread do ganho
                 ask_id = next(self.order_ids)
                 ask_price = self.last_bids[Instrument.FUTURE][0] - TICK_SIZE_IN_CENTS
-                # if ask_price < self.last_bids[Instrument.ETF][0] and self.last_bids[Instrument.ETF][0] != 0:
-                #     ask_price = self.last_bids[Instrument.ETF][0]
                 ask_volume = 10
                 self.send_insert_order(ask_id,
                                        Side.ASK,

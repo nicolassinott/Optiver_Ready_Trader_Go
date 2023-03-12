@@ -23,6 +23,9 @@
 #include <string>
 #include <unordered_set>
 
+// adds
+#include <unordered_map>
+
 #include <boost/asio/io_context.hpp>
 
 #include <ready_trader_go/baseautotrader.h>

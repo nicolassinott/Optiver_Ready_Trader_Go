@@ -33,8 +33,8 @@ constexpr int TICK_SIZE_IN_CENTS = 100;
 constexpr int MIN_BID_NEARST_TICK = (MINIMUM_BID + TICK_SIZE_IN_CENTS) / TICK_SIZE_IN_CENTS * TICK_SIZE_IN_CENTS;
 constexpr int MAX_ASK_NEAREST_TICK = MAXIMUM_ASK / TICK_SIZE_IN_CENTS * TICK_SIZE_IN_CENTS;
 
-constexpr int MIN_PROFITABILITY = 3;
-constexpr int MAX_ORDERS = 5;
+constexpr int MIN_PROFITABILITY = 2;
+constexpr int MAX_ORDERS = 2;
 constexpr int ORDER_VOLUME = 10;
 
 constexpr int FUTURE = 0, ETF = 1;
@@ -95,11 +95,8 @@ void AutoTrader::OrderBookMessageHandler(Instrument instrument,
     // Must check if proceed or not
     // Cancel bid
     for(auto& [bidId, bidPrice] : mBids){
-        if(mCanceledIds.count(bidId)) {
-            RLOG(LG_AT, LogLevel::LL_INFO) << "hmmm";
-            continue;
-        }
-        if(mLastBidPrices[FUTURE][0] <= bidPrice + MIN_PROFITABILITY * TICK_SIZE_IN_CENTS * mPosition/POSITION_LIMIT){
+        if(mCanceledIds.count(bidId)) continue;
+        if(mLastBidPrices[FUTURE][0] <= bidPrice + MIN_PROFITABILITY * TICK_SIZE_IN_CENTS){ //* mPosition/POSITION_LIMIT){
             RLOG(LG_AT, LogLevel::LL_INFO) << "1: " << mBids.size();
             SendCancelOrder(bidId);
             RLOG(LG_AT, LogLevel::LL_INFO) << "2: " << mBids.size();
@@ -113,7 +110,7 @@ void AutoTrader::OrderBookMessageHandler(Instrument instrument,
     // Cancel ask
     for(auto& [askId, askPrice] : mAsks){
         if(mCanceledIds.count(askId)) continue;
-        if(mLastAskPrices[ETF][0] >= askPrice - MIN_PROFITABILITY * TICK_SIZE_IN_CENTS * mPosition/POSITION_LIMIT){
+        if(mLastAskPrices[FUTURE][0] >= askPrice - MIN_PROFITABILITY * TICK_SIZE_IN_CENTS){ // * mPosition/POSITION_LIMIT){
             SendCancelOrder(askId);
             mCanceledIds.insert(askId);
         } else if (mLastAskPrices[ETF][1] < askPrice && mLastAskPrices[ETF][1]){
@@ -126,6 +123,7 @@ void AutoTrader::OrderBookMessageHandler(Instrument instrument,
     // Create order flow
     // If no current position, checks if profitable
     if(mBids.size() < MAX_ORDERS && mPosition < POSITION_LIMIT){
+        // RLOG(LG_AT, LogLevel::LL_INFO) << "Bids: " << ++mCntBids;
         if(mLastBidPrices[FUTURE][0] > mLastBidPrices[ETF][0] + MIN_PROFITABILITY * TICK_SIZE_IN_CENTS 
         && mLastBidPrices[ETF][0] > MIN_PROFITABILITY * TICK_SIZE_IN_CENTS){
             unsigned long bidId = ++mNextMessageId;
@@ -148,6 +146,7 @@ void AutoTrader::OrderBookMessageHandler(Instrument instrument,
     }
 
     if(mAsks.size() < MAX_ORDERS && mPosition > -POSITION_LIMIT){
+        // RLOG(LG_AT, LogLevel::LL_INFO) << "Asks: " << ++mCntAsks;
         if(mLastAskPrices[FUTURE][0] < mLastAskPrices[ETF][0] - MIN_PROFITABILITY * TICK_SIZE_IN_CENTS 
         && mLastAskPrices[ETF][0] > MIN_PROFITABILITY * TICK_SIZE_IN_CENTS){
             unsigned long askId = ++mNextMessageId;

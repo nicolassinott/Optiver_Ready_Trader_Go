@@ -1,11 +1,11 @@
 {
   "Engine": {
-    "MarketDataFile": "data/market_data2.csv",
+    "MarketDataFile": "data/market_data1.csv",
     "MarketEventInterval": 0.05,
     "MarketOpenDelay": 5.0,
     "MatchEventsFile": "match_events.csv",
     "ScoreBoardFile": "score_board.csv",
-    "Speed": 1.0,
+    "Speed": 3.0,
     "TickInterval": 0.25
   },
   "Execution": {
@@ -41,6 +41,9 @@
     "Trader1": "secret",
     "Trader2": "secret",
     "Trader3": "secret",
-    "Trader4": "secret"
+    "Trader4": "secret",
+    "Scarpa": "secret",
+    "data_bot": "secret",
+    "linear_regression_trader" : "secret"
   }
 }

@@ -2,7 +2,7 @@
 
 ## :open_book: Description 
 
-This repository contais our solution to the Optiver's Ready Trader Go competition. The challenge consists in creating algorithmic trading strategies with a financial asset beetween to markets: 
+This repository contais our solution to the Optiver's Ready Trader Go Challenge. The competition consists in creating algorithmic trading strategies with a financial asset beetween to markets: 
 
 * Future market (liquid market)
 * ETF market (iliquid market)

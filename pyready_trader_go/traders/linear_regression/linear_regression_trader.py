@@ -178,13 +178,10 @@ def transform(data : pd.DataFrame):
     return X[remaining_features], y
 
 class AutoTrader(BaseAutoTrader):
-    """Example Auto-trader.
+    """Linear regression trader.
 
-    When it starts this auto-trader places ten-lot bid and ask orders at the
-    current best-bid and best-ask prices respectively. Thereafter, if it has
-    a long position (it has bought more lots than it has sold) it reduces its
-    bid and ask prices. Conversely, if it has a short position (it has sold
-    more lots than it has bought) then it increases its bid and ask prices.
+    Tries to predict the trend in the price (whether if it's going up or down)
+    and places directional orders in the predicted direction.
     """
 
     def __init__(self, loop: asyncio.AbstractEventLoop, team_name: str, secret: str):
@@ -266,7 +263,6 @@ class AutoTrader(BaseAutoTrader):
         print(f"changing beta: {data.shape[0]}")
         X, y = transform(data.tail(200)) 
         new_X = np.array(X)
-        # new_X = np.insert(new_X, 0, np.ones(new_X.shape[0]), axis=1)
 
         self.beta = np.linalg.multi_dot([np.linalg.inv(new_X.transpose().dot(new_X)), new_X.transpose(), y]) 
         print(self.beta)

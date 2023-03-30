@@ -34,13 +34,12 @@ MAX_ORDERS = 2
 ORDER_VOLUME = 10
  
 class AutoTrader(BaseAutoTrader):
-    """Example Auto-trader.
+    """Arbitrage Auto-trader.
 
-    When it starts this auto-trader places ten-lot bid and ask orders at the
-    current best-bid and best-ask prices respectively. Thereafter, if it has
-    a long position (it has bought more lots than it has sold) it reduces its
-    bid and ask prices. Conversely, if it has a short position (it has sold
-    more lots than it has bought) then it increases its bid and ask prices.
+    Performs arbitrage between exchanges. When it starts, it will 
+    try to place profitable orders decreasing the spread and providing 
+    liquidity to the ETF market.
+    In every tick, it will replace non competitive orders.
     """
 
     def __init__(self, loop: asyncio.AbstractEventLoop, team_name: str, secret: str):
@@ -56,19 +55,13 @@ class AutoTrader(BaseAutoTrader):
             Instrument.FUTURE: [MINIMUM_BID, MINIMUM_BID, MINIMUM_BID, MINIMUM_BID, MINIMUM_BID],
             Instrument.ETF: [MINIMUM_BID, MINIMUM_BID, MINIMUM_BID, MINIMUM_BID, MINIMUM_BID]
         }
-        # self.last_bids_volumes = {
-        #     Instrument.FUTURE: [0, 0, 0, 0, 0],
-        #     Instrument.ETF: [0, 0, 0, 0, 0]
-        # }
+ 
 
         self.last_asks = {
             Instrument.FUTURE: [0, 0, 0, 0, 0],
             Instrument.ETF: [0, 0, 0, 0, 0]
         }
-        # self.last_asks_volumes = {
-        #     Instrument.FUTURE: [0, 0, 0, 0, 0],
-        #     Instrument.ETF: [0, 0, 0, 0, 0]
-        # }
+        
 
     def on_error_message(self, client_order_id: int, error_message: bytes) -> None:
         """Called when the exchange detects an error.
@@ -99,20 +92,16 @@ class AutoTrader(BaseAutoTrader):
         prices are reported along with the volume available at each of those
         price levels.
         """
-        # self.logger.info("received order book for instrument %d with sequence number %d", instrument,
-        #                  sequence_number)
+
         if instrument == Instrument.FUTURE:
             self.last_bids[Instrument.FUTURE] = bid_prices
             self.last_asks[Instrument.FUTURE] = ask_prices
 
-            # self.last_bids_volumes[Instrument.FUTURE] = bid_volumes
-            # self.last_asks_volumes[Instrument.FUTURE] = ask_volumes
+
         else:
             self.last_bids[Instrument.ETF] = bid_prices
             self.last_asks[Instrument.ETF] = ask_prices
 
-            # self.last_bids_volumes[Instrument.ETF] = bid_volumes
-            # self.last_asks_volumes[Instrument.ETF] = ask_volumes
 
         # Cancel order flow
         # Must check if proceed or not
@@ -160,8 +149,6 @@ class AutoTrader(BaseAutoTrader):
             elif self.position < - POSITION_LIMIT * 0.6 and self.last_asks[Instrument.FUTURE][0] != 0:
                 bid_id = next(self.order_ids)
                 bid_price = self.last_asks[Instrument.FUTURE][0] + TICK_SIZE_IN_CENTS
-                # if bid_price > self.last_asks[Instrument.ETF][0] and self.last_asks[Instrument.ETF][0] != 0:
-                #     bid_price = self.last_asks[Instrument.ETF][0]
                 bid_volume = 10
                 self.send_insert_order(bid_id,
                                        Side.BID,
@@ -189,11 +176,8 @@ class AutoTrader(BaseAutoTrader):
                 self.logger.info(f"{sequence_number},ASK,{ask_id},{self.last_bids[Instrument.ETF][0]},{self.last_asks[Instrument.ETF][0]},{self.last_bids[Instrument.FUTURE][0]},{self.last_asks[Instrument.FUTURE][0]},{ask_price},0")
 
             elif self.position > POSITION_LIMIT * 0.6 and self.last_bids[Instrument.FUTURE][0] != 0:
-                # talvez ver o spread do ganho
                 ask_id = next(self.order_ids)
                 ask_price = self.last_bids[Instrument.FUTURE][0] - TICK_SIZE_IN_CENTS
-                # if ask_price < self.last_bids[Instrument.ETF][0] and self.last_bids[Instrument.ETF][0] != 0:
-                #     ask_price = self.last_bids[Instrument.ETF][0]
                 ask_volume = 10
                 self.send_insert_order(ask_id,
                                        Side.ASK,

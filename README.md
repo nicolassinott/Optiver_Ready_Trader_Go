@@ -45,7 +45,7 @@ For example:
 python3 rtg.py run autotrader.py
 ```
 
-Our Python trader showed the best performance in training set, however a similar version in C++ is also provided in the cppready_trader_go folder. There we experimented with different parameters (such as handling higher number of orders) that took advantage of the lower lattency of this programming language. The instructions to run this trader is provided in the README of its folder.
+Our Python trader showed the best performance in training set, however a similar version in C++ is also provided in the cppready_trader_go folder. There, we experimented with different parameters (such as handling higher number of orders) that took advantage of the lower lattency of this programming language. The instructions to run this trader is provided in the README of its folder.
 
 ## :bulb: Improvements
 

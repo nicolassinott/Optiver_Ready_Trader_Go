@@ -23,6 +23,9 @@
 #include <string>
 #include <unordered_set>
 
+// adds
+#include <unordered_map>
+
 #include <boost/asio/io_context.hpp>
 
 #include <ready_trader_go/baseautotrader.h>
@@ -101,8 +104,9 @@ private:
     // std::unordered_set<unsigned long> mAsks;
     // std::unordered_set<unsigned long> mBids;
 
+    // unsigned long mCntBids = 0, mCntAsks = 0;
     unsigned long mNextMessageId = 1;
-    signed long mPosition = 0; 
+    signed long mPosition = 0;
 
     std::unordered_set<unsigned long> mCanceledIds;
     std::unordered_map<unsigned long, unsigned long> mAsks;

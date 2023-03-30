@@ -2,12 +2,12 @@
 
 ## :open_book: Description 
 
-This repository contais one possible solution from Optiver's Ready Trader Go challenge. The challenge consists in creating algorithmic trading strategies with a financial asset beetween to markets: 
+This repository contais our solution to the Optiver's Ready Trader Go competition. The challenge consists in creating algorithmic trading strategies with a financial asset beetween to markets: 
 
-* Future market (a very liquid market)
-* ETF market (an iliquid market)
+* Future market (liquid market)
+* ETF market (iliquid market)
 
-The goal here is to provide liquidity to the iliquid market and at the same time, make profit with your strategy.
+The goal is to create an algorithmic trading strategy to make profit while providing liquidity to the iliquid market.
 
 ## :chart_with_upwards_trend: The algorithm
 
@@ -45,10 +45,12 @@ For example:
 python3 rtg.py run autotrader.py
 ```
 
+Our Python trader showed the best performance in training set, however a similar version in C++ is also provided in the cppready_trader_go folder. There we experimented with different parameters (such as handling higher number of orders) that took advantage of the lower lattency of this programming language. The instructions to run this trader is provided in the README of its folder.
+
 ## :bulb: Improvements
 
 Our algorithm performs very well in illiquid markets (as in the train data provided by Optiver) 
-and our strategy takes almost no risk. However, in during the competition rounds, due to the participation of new market makers, the spread between the Future and the ETF was almost zero. Therefore our algorithm spent a long time without carrying out transactions, which lowered our final pnl, even if it didn't lower the sharpe ratio.
+and our strategy takes almost no risk. In the competition rounds, due to the participation of new market makers, the spread between the Future and the ETF was almost zero, hence reducing the arbitrage opportunities that our model needed for making large profits. Therefore our algorithm spent a long time without carrying out transactions, which lowered our final pnl but didn't lower the sharpe ratio.
 
 One possible improvement for this strategy is to use pair trading beetwen the spread Future - ETF:
 
